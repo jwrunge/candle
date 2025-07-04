@@ -4,14 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-candle-nn = { git = "https://github.com/huggingface/candle.git", version = "0.9.1" }
+candle-nn = "0.9.1"
+candle-transformers = "0.9.1"
 hf-hub = { version = "0.4.3", features = ["tokio"] }
+tokenizers = "0.21.2"
 tokio = { version = "1.46.0", features = ["macros", "rt-multi-thread"] }
+serde_json = "1.0"
 
 # Conditional dependency for Metal on macOS
 [target.'cfg(target_os = "macos")'.dependencies]
-candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.9.1", features = ["metal"] }
+candle-core = { version = "0.9.1", features = ["metal"] }
 
 # Conditional dependency for CUDA on Linux/Windows
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
-candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.9.1", features = ["cuda"] }
+candle-core = { version = "0.9.1", features = ["cuda"] }
