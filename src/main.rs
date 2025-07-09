@@ -1,133 +1,26 @@
-// use candle_core::{DType, Device, Tensor};
-// use candle_nn::{Linear, Module};
-
-// mod compute_device;
-// mod hf_repo;
-
-// #[tokio::main]
-// async fn main() {
-//     let (weights_filename, maybe_tokenizer_filename) =
-//         hf_repo::get_model("mistralai/Mistral-7B-v0.1".to_string())
-//             .await
-//             .expect("Failed to get model weights");
-
-//     let device = compute_device::get();
-//     let weights = candle_core::safetensors::load(&weights_filename, &device).unwrap();
-//     let tokenizer = match(maybe_tokenizer_filename) {
-//         Some(filename)=> tokenizers::Tokenizer::from_file(filename).expect("Failed to load tokenizer"),
-//         None => None
-//     };
-
-//     // 3. Load model configuration and weights
-//     // The config usually comes from the model's Hugging Face repo
-//     let config_filename = repo.get("config.json").await?;
-//     let config: LlamaConfig = serde_json::from_str(&std::fs::read_to_string(config_filename)?)?;
-
-//     let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[model_filename], DType::F32, &device)? };
-//     let model = Llama::new(&config, vb)?;
-
-//     // 4. Implement prompt and generation loop
-//     let prompt = "Hello, what is your name?";
-//     let mut tokens = tokenizer
-//         .encode(prompt, true)
-//         .map_err(candle_core::Error::wrap)?
-//         .get_ids()
-//         .to_vec();
-
-//     let mut generated_text = String::new();
-//     let max_tokens = 100; // Max tokens to generate
-
-//     for i in 0..max_tokens {
-//         let input_tensor = Tensor::new(&tokens, &device)?.unsqueeze(0)?; // Add batch dimension
-//         let logits = model.forward(&input_tensor, tokens.len())?; // Pass sequence length
-
-//         // Get the last token's logits
-//         let last_logit = logits.squeeze(0)?.get(logits.shape().dims()[1] - 1)?;
-
-//         // Sample the next token (simple argmax for now, you'd typically use sampling like top-k/top-p)
-//         let next_token_id = last_logit.argmax(0)?.to_scalar::<u32>()?;
-
-//         if next_token_id == tokenizer.get_eos_token_id().unwrap_or(0) {
-//             // Stop if EOS token is generated
-//             break;
-//         }
-
-//         tokens.push(next_token_id);
-
-//         let new_token = tokenizer.decode(&[next_token_id], true)
-//             .map_err(candle_core::Error::wrap)?;
-//         generated_text.push_str(&new_token);
-
-//         println!("Generated: {}", generated_text); // Or just print the final result
-//     }
-
-//     println!("Final response: {}", generated_text);
-
-//     Ok(())
-// }
-
-//     let weight = weights
-//         .get("bert.encoder.layer.0.attention.self.query.weight")
-//         .unwrap();
-//     let bias = weights
-//         .get("bert.encoder.layer.0.attention.self.query.bias")
-//         .unwrap();
-
-//     let linear = Linear::new(weight.clone(), Some(bias.clone()));
-
-//     let input_ids = Tensor::zeros((3, 768), DType::F32, &device).unwrap();
-//     let output = linear.forward(&input_ids).unwrap();
-
-//     println!("Output shape: {:?}", output.shape());
-// }
-
-use candle_core::{Device, Tensor};
-use hf_hub::{
-    Repo,
-    api::tokio::{Api, ApiBuilder},
-};
+use candle_core::Tensor;
+use hf_hub::Repo;
 use tokenizers::Tokenizer;
+
+mod api;
+mod compute_device;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Candle LLM Inference with Metal GPU");
-    println!("Loading a real language model for inference...");
-    println!("");
-
-    // Check if we have a token
-    let token = match std::env::var("HF_TOKEN") {
-        Ok(token) => {
-            println!("✓ HF_TOKEN found");
-            Some(token)
-        }
-        Err(_) => {
-            println!("ℹ️ No HF_TOKEN found, trying public model");
-            None
-        }
-    };
-
-    // 1. Initialize Device (CPU for compatibility with all models)
-    let device = Device::Cpu;
-    println!("✓ Using CPU device for maximum compatibility");
-
-    // 2. Load a smaller, public model that works well
-    let api = if let Some(token) = token {
-        ApiBuilder::new().with_token(Some(token)).build()?
-    } else {
-        Api::new()?
-    };
+    let device = compute_device::get();
+    let api = api::get().await;
 
     // Use a smaller model that's publicly available and works well
     let repo = api.repo(Repo::model("gpt2".to_string()));
 
-    println!("📥 Downloading tokenizer...");
+    println!("Downloading tokenizer...");
     let tokenizer_path = repo.get("tokenizer.json").await?;
     let tokenizer = Tokenizer::from_file(tokenizer_path).map_err(|e| e.to_string())?;
-    println!("✓ Tokenizer loaded");
+    println!("Tokenizer loaded");
 
     // 3. For this demo, let's create a simple text completion using the tokenizer
     let prompt = "Hi! How are you doing today?";
-    println!("\n🤖 Running inference...");
+    println!("\nRunning inference...");
     println!("Prompt: '{}'", prompt);
 
     // Encode the prompt
