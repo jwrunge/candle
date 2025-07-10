@@ -2,6 +2,8 @@ use candle_core::Tensor;
 use hf_hub::Repo;
 use tokenizers::Tokenizer;
 
+use crate::api::ApiExt;
+
 mod api;
 mod compute_device;
 
@@ -9,6 +11,25 @@ mod compute_device;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = compute_device::get();
     let api = api::get().await;
+
+    // Test search info
+    api.print_search(
+        "SEARCHING FOR GEMMA MODELS",
+        api.search_models("gemma", Some(10))
+            .await
+            .unwrap_or_else(|_| vec![]),
+        true,
+    )
+    .await;
+
+    api.print_search(
+        "POPULAR MODELS",
+        api.list_popular_models().await.unwrap_or_else(|_| vec![]),
+        false,
+    )
+    .await;
+
+    println!("\n{}", "=".repeat(50));
 
     // Use a smaller model that's publicly available and works well
     let repo = api.repo(Repo::model("gpt2".to_string()));
