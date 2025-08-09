@@ -8,3 +8,16 @@ candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.
 candle-nn = { git = "https://github.com/huggingface/candle.git", version = "0.9.1" }
 hf-hub = { version = "0.4.3", features = ["tokio"] }
 tokio = { version = "1.46.0", features = ["macros", "rt-multi-thread"] }
+
+
+[dependencies]
+candle-core = { version = "0.x.x" } # Base dependency
+
+# Conditional dependency for Metal on macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+candle-core = { version = "0.x.x", features = ["metal", "accelerate"] }
+
+# Conditional dependency for CUDA on Linux/Windows (example)
+[target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
+# For systems where CUDA might be available
+candle-core = { version = "0.x.x", features = ["cuda"] }
